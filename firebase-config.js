@@ -6,10 +6,10 @@
 //  Your data is protected by the Firestore security rules.
 // ============================================================
 export const firebaseConfig = {
-  apiKey: "PASTE_API_KEY",
-  authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
-  projectId: "PASTE_PROJECT_ID",
-  storageBucket: "PASTE_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId: "PASTE_APP_ID"
+  apiKey: "AIzaSyCDv9Ha6urt8QLsilVx2klz6Ju77sEsgqE",
+  authDomain: "ftm-journal.firebaseapp.com",
+  projectId: "ftm-journal",
+  storageBucket: "ftm-journal.firebasestorage.app",
+  messagingSenderId: "721229885809",
+  appId: "1:721229885809:web:502f445cbaa6c1cb14c6d0"
 };

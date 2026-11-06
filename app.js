@@ -488,6 +488,8 @@ function viewSettings() {
       <p class="muted tiny" style="margin-top:0">Used to turn prices into pips/points and dollars. <b>Pip size</b> = price move of 1 pip (EURUSD 0.0001, gold 0.1, NAS100 1). <b>Pip value</b> = what 1 pip is worth for 1.00 lot in your account currency. Check both with your broker. If you type the broker's P&amp;L in a trade, that always wins.</p>
       <div id="instTable">${insts.map((i, n) => `<div class="inst-row" data-i="${n}"><input class="in-name" value="${esc(i.name)}" placeholder="Symbol" aria-label="Symbol"><input class="in-pip" type="number" step="any" value="${i.pip}" aria-label="Pip size"><input class="in-val" type="number" step="any" value="${i.pipValue}" aria-label="Pip value"><input class="in-dp" type="number" step="1" min="0" max="6" value="${i.dp ?? 5}" aria-label="Decimals"><button class="btn sm danger" data-act="inst-del" data-i="${n}">✕</button></div>`).join('')}
       <div class="inst-row tiny muted" style="margin-top:-4px"><span>Symbol</span><span>Pip size</span><span>Pip value / lot</span><span>Decimals</span><span></span></div></div></div>
+    <div class="card"><div class="card-h"><h3>Install as an app</h3></div>
+      <div class="row"><div class="lbl">Add FTM Journal to your phone or computer<small>${esc(installHint())}</small></div>${S.installEvt ? '<button class="btn sm primary" data-act="install">Install</button>' : ''}</div></div>
     <div class="card"><div class="card-h"><h3>Your data</h3></div>
       <div class="row"><div class="lbl">Export trades<small>Opens in Excel / Google Sheets</small></div><button class="btn sm" data-act="export-csv">Download CSV</button></div>
       <div class="row"><div class="lbl">Full backup<small>Accounts, trades, journal, settings (no screenshots)</small></div><button class="btn sm" data-act="export-json">Download backup</button><button class="btn sm" data-act="restore-pick">Restore backup</button><input type="file" id="restoreFile" accept=".json,application/json" hidden></div>
@@ -498,6 +500,13 @@ function viewSettings() {
       <div class="row"><div class="lbl">${esc(S.user.name)}<small>${esc(S.user.email || 'Demo mode')}</small></div><button class="btn sm" data-act="signout">Sign out</button></div></div>
   </div>`;
   return { html };
+}
+
+function installHint() {
+  if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) return 'You are using the installed app.';
+  if (S.installEvt) return 'One tap: it gets its own icon and opens full screen.';
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent)) return 'In Safari tap the Share button, then "Add to Home Screen".';
+  return 'In Chrome or Edge open the browser menu and choose "Install app" or "Add to Home screen".';
 }
 
 const VIEWS = { dashboard: viewDashboard, trades: viewTrades, journal: viewJournal, reports: viewReports, accounts: viewAccounts, settings: viewSettings };
@@ -890,6 +899,7 @@ const ACTIONS = {
   'import-pick': () => { if (!S.accounts.length) return toast('Create an account first', true); $('#csvFile').click(); },
   sample: () => safe(loadSample, 'Could not load sample'),
   signout: () => safe(() => store.signOut()),
+  install: async () => { const e = S.installEvt; if (!e) return; e.prompt(); await e.userChoice.catch(() => {}); S.installEvt = null; render(); },
 };
 function saveInst() { safe(() => store.set('settings', 'instruments', { list: instList() }), 'Could not save instruments'); }
 
@@ -933,6 +943,10 @@ document.addEventListener('change', (e) => {
 $('#scopeSel').addEventListener('change', (e) => { S.scope = e.target.value; lsSet('scope', S.scope); render(); });
 $('#periodSel').addEventListener('change', (e) => { S.period = e.target.value; lsSet('period', S.period); render(); });
 window.addEventListener('beforeunload', flushJournal);
+
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); S.installEvt = e; render(); });
+window.addEventListener('appinstalled', () => { S.installEvt = null; toast('App installed'); render(); });
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch((e) => console.warn('SW', e)));
 
 /* =====================================================================
    Boot

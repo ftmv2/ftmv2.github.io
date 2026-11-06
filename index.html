@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>FTM Journal</title>
+  <meta name="description" content="A clean, private trading journal for forex, gold and indices.">
+  <meta name="theme-color" content="#0e1013">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%235b8def'/%3E%3Cpath d='M7 21l6-7 4 4 8-10' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="bg" aria-hidden="true"></div>
+
+  <div id="boot" class="center"><div class="spinner"></div></div>
+
+  <!-- Login -->
+  <section id="login" class="center" hidden>
+    <div class="login-card card">
+      <div class="logo">FTM</div>
+      <h1>FTM Journal</h1>
+      <p class="muted">Log every trade, review your edge, and track all your accounts in one place.</p>
+      <button class="btn primary block" id="googleBtn" hidden>
+        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.1 5.5c4.3-4 6.8-9.9 6.8-16.9z"/><path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 010-9.4l-7.9-6.1a24 24 0 000 21.6l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.1-5.5c-2 1.4-4.9 2.3-8.8 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+        Continue with Google
+      </button>
+      <div id="setupNotice" class="notice" hidden>
+        <b>Cloud login isn't connected yet.</b> Follow the setup guide to add your Firebase keys in <code>firebase-config.js</code>.
+        Until then you can try the site in demo mode (data stays in this browser only).
+        <button class="btn block" id="demoBtn">Try demo mode</button>
+      </div>
+      <p class="tiny muted" id="loginErr" hidden></p>
+    </div>
+  </section>
+
+  <!-- App -->
+  <div id="shell" hidden>
+    <aside class="side">
+      <div class="brand"><span class="logo sm">FTM</span><span>Journal</span></div>
+      <nav id="sideNav"></nav>
+      <div class="side-foot">
+        <div class="who" id="who"></div>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div class="filters">
+          <select id="scopeSel" aria-label="Account"></select>
+          <select id="periodSel" aria-label="Period">
+            <option value="all">All time</option>
+            <option value="today">Today</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="month">This month</option>
+            <option value="year">This year</option>
+          </select>
+        </div>
+        <button class="btn primary" data-act="add-trade"><svg class="ic" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Add trade</span></button>
+      </header>
+      <div id="demoBar" class="demo-bar" hidden>Demo mode: your data is saved only in this browser. Connect Firebase to sync across devices.</div>
+      <div id="view"></div>
+    </main>
+
+    <nav class="bottom" id="bottomNav"></nav>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

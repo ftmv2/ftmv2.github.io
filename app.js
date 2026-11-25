@@ -951,11 +951,53 @@ if ('serviceWorker' in navigator) window.addEventListener('load', () => navigato
 /* =====================================================================
    Boot
    ===================================================================== */
+function loginMsg(msg, ok = false) {
+  const el = $('#loginErr');
+  el.hidden = !msg; el.textContent = msg || ''; el.classList.toggle('ok', ok);
+}
+const AUTH_ERR = {
+  'auth/invalid-credential': 'Wrong email or password.',
+  'auth/wrong-password': 'Wrong email or password.',
+  'auth/user-not-found': 'No account with that email. Choose "Create a new account".',
+  'auth/email-already-in-use': 'That email already has an account. Sign in instead, or use "Forgot password?".',
+  'auth/weak-password': 'Password must be at least 6 characters.',
+  'auth/invalid-email': 'That email address does not look right.',
+  'auth/missing-password': 'Enter your password.',
+  'auth/too-many-requests': 'Too many attempts. Wait a few minutes and try again.',
+  'auth/network-request-failed': 'No internet connection.',
+  'auth/operation-not-allowed': 'Email sign-in is not switched on yet. In Firebase open Authentication, Sign-in method, and enable Email/Password.',
+};
+let signingUp = false;
+function setMode(up) {
+  signingUp = up;
+  $('#emSubmit').textContent = up ? 'Create account' : 'Sign in';
+  $('#emToggle').textContent = up ? 'I already have an account' : 'Create a new account';
+  $('#emPass').autocomplete = up ? 'new-password' : 'current-password';
+  loginMsg('');
+}
+$('#emToggle').addEventListener('click', () => setMode(!signingUp));
+$('#emailForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = $('#emEmail').value.trim(), pw = $('#emPass').value;
+  if (!email || !pw) return loginMsg('Enter your email and password.');
+  const b = $('#emSubmit'); b.disabled = true; loginMsg('');
+  try { await (signingUp ? store.signUpEmail(email, pw) : store.signInEmail(email, pw)); }
+  catch (err) { console.error(err); loginMsg(AUTH_ERR[err.code] || 'Sign-in failed: ' + (err.message || err.code)); }
+  finally { b.disabled = false; }
+});
+$('#emForgot').addEventListener('click', async () => {
+  const email = $('#emEmail').value.trim();
+  if (!email) return loginMsg('Type your email above first, then tap "Forgot password?".');
+  try { await store.resetPassword(email); loginMsg('Password reset email sent. Check your inbox and spam folder.', true); }
+  catch (err) { loginMsg(AUTH_ERR[err.code] || 'Could not send the email: ' + (err.message || err.code)); }
+});
+
 function showLogin(err) {
   $('#boot').hidden = true; $('#shell').hidden = true; $('#login').hidden = false;
   $('#googleBtn').hidden = !store.cloudReady;
+  $('#emailBox').hidden = !store.cloudReady;
   $('#setupNotice').hidden = store.cloudReady;
-  const el = $('#loginErr'); el.hidden = !err; el.textContent = err || '';
+  loginMsg(err);
 }
 function onAuth(user) {
   $('#boot').hidden = true;
@@ -972,7 +1014,7 @@ $('#googleBtn').addEventListener('click', async () => {
   try { await store.signInGoogle(); }
   catch (e) {
     console.error(e);
-    showLogin(e.code === 'auth/unauthorized-domain' ? 'This website address is not authorised yet. Add it in Firebase > Authentication > Settings > Authorized domains.' : 'Sign-in failed: ' + (e.message || e.code));
+    loginMsg(e.code === 'auth/unauthorized-domain' ? 'This website address is not authorised yet. Add it in Firebase > Authentication > Settings > Authorized domains.' : 'Sign-in failed: ' + (e.message || e.code));
   } finally { b.disabled = false; }
 });
 $('#demoBtn').addEventListener('click', () => store.startDemo());

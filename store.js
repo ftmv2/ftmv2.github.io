@@ -38,7 +38,7 @@ export async function init(cb) {
   fdb = fs.getFirestore(a);
   au.onAuthStateChanged(auth, (u) => {
     uid = u ? u.uid : null;
-    cb(u ? { uid: u.uid, name: u.displayName || 'Trader', email: u.email || '', photo: u.photoURL || '' } : null);
+    cb(u ? { uid: u.uid, name: u.displayName || (u.email ? u.email.split('@')[0] : 'Trader'), email: u.email || '', photo: u.photoURL || '' } : null);
   });
 }
 
@@ -55,6 +55,10 @@ export async function signInGoogle() {
     }
   }
 }
+
+export const signInEmail = (email, pw) => F.signInWithEmailAndPassword(auth, email, pw);
+export const signUpEmail = (email, pw) => F.createUserWithEmailAndPassword(auth, email, pw);
+export const resetPassword = (email) => F.sendPasswordResetEmail(auth, email);
 
 export function startDemo() {
   localStorage.setItem(LP + 'demoflag', '1');

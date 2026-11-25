@@ -223,3 +223,13 @@ input[type=datetime-local], input[type=date] { min-width: 0; max-width: 100%; }
   .cal .d { min-height: 48px; padding: 3px 4px; } .cal .d i { font-size: 10px; } .cal .d small { display: none; }
   #toast { bottom: 90px; }
 }
+
+/* email sign-in */
+.or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; margin: 2px 0 12px; }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+#emailForm { text-align: left; gap: 10px; }
+.em-links { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.link { background: none; border: 0; padding: 2px 0; color: var(--accent); cursor: pointer; font-size: 13px; }
+.link:hover { text-decoration: underline; }
+#loginErr.ok { color: var(--win); }
+#loginErr:not(.ok) { color: var(--loss); }

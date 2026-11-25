@@ -366,15 +366,54 @@ function flushJournal() {
   if (!jPending) return;
   clearTimeout(jTimer);
   const { date, data } = jPending; jPending = null;
-  safe(() => store.set('journal', date, { date, ...data, updatedAt: Date.now() }), 'Could not save journal');
+  safe(() => store.set('journal', date, { date, ...data, updatedAt: Date.now() }, true), 'Could not save journal');
   const el = $('#jSaved'); if (el) el.textContent = 'Saved';
 }
+const shotCache = new Map();
+const journalShotIds = (d) => (S.journal[d] && S.journal[d].shots) || [];
+async function drawJShots(d) {
+  const box = $('#jShots');
+  if (!box) return;
+  const ids = journalShotIds(d);
+  box.innerHTML = ids.map((id) => `<div class="thumb" data-id="${esc(id)}">${shotCache.get(id) ? `<img src="${shotCache.get(id)}" alt="Journal image">` : ''}<button type="button" data-rm="${esc(id)}" aria-label="Remove image">✕</button></div>`).join('')
+    + '<button type="button" class="add-shot" id="jAdd">＋<br>Add</button>';
+  const missing = ids.filter((id) => !shotCache.has(id));
+  if (missing.length) {
+    await Promise.all(missing.map(async (id) => { const doc = await store.get('shots', id).catch(() => null); shotCache.set(id, (doc && doc.data) || ''); }));
+    if (S.jDate === d && $('#jShots')) drawJShots(d);
+  }
+}
+async function addJournalImages(files, d) {
+  const ids = [...journalShotIds(d)];
+  for (const f of files) {
+    if (!f.type.startsWith('image/')) continue;
+    await safe(async () => {
+      const data = await compress(f), id = store.newId();
+      await store.set('shots', id, { data, journalDate: d, createdAt: Date.now() });
+      shotCache.set(id, data); ids.push(id);
+      await store.set('journal', d, { date: d, shots: ids, updatedAt: Date.now() }, true);
+      S.journal[d] = { ...(S.journal[d] || { id: d }), date: d, shots: [...ids] };
+      if (S.jDate === d) drawJShots(d);
+    }, 'Could not add image');
+  }
+}
+async function removeJournalImage(id, d) {
+  const ids = journalShotIds(d).filter((x) => x !== id);
+  await safe(async () => {
+    await store.set('journal', d, { date: d, shots: ids, updatedAt: Date.now() }, true);
+    await store.del('shots', id);
+    shotCache.delete(id);
+    S.journal[d] = { ...(S.journal[d] || { id: d }), shots: ids };
+    if (S.jDate === d) drawJShots(d);
+  }, 'Could not remove image');
+}
+
 function viewJournal() {
   const d = S.jDate, j = S.journal[d] || {};
   const { ts } = ctx({ period: false });
   const day = ts.filter((t) => t.day === d).sort((a, b) => a.ts - b.ts);
   const m = summarize(day, 0);
-  const recent = Object.values(S.journal).filter((x) => x.plan || x.review || x.lessons || x.news).sort((a, b) => (a.id < b.id ? 1 : -1)).slice(0, 10);
+  const recent = Object.values(S.journal).filter((x) => x.plan || x.review || x.lessons || x.news || (x.shots && x.shots.length)).sort((a, b) => (a.id < b.id ? 1 : -1)).slice(0, 10);
   const field = (k, label, ph, rows = 3) => `<label class="f"><span>${label}</span><textarea class="jr" data-k="${k}" rows="${rows}" placeholder="${ph}">${esc(j[k] || '')}</textarea></label>`;
   const html = `<div class="page-h"><h2>Daily journal</h2>
       <div class="cal-h"><button class="btn sm" data-act="j-prev" aria-label="Previous day">${icon('left')}</button>
@@ -388,6 +427,7 @@ function viewJournal() {
         ${field('plan', 'Pre-market plan', 'Bias, key levels, setups to look for, max risk for the day…', 4)}
         ${field('review', 'End-of-day review', 'What happened? Did you follow your plan?', 4)}
         ${field('lessons', 'Lessons / one thing to improve tomorrow', 'Be specific.', 2)}
+        <div class="f"><span class="muted tiny" style="display:block;margin-bottom:6px">Images <span class="tiny">(charts, your plan, notes: click ＋, drag a file in, or paste with Ctrl+V)</span></span><div class="shots" id="jShots"></div><input type="file" id="jShotFile" accept="image/*" multiple hidden></div>
       </div>
       <div class="stack">
         <div class="card"><div class="card-h"><h3>This day's trades</h3><span class="${cls(m.net)} num"><b>${day.length ? money(m.net, { sign: true }) : ''}</b></span></div>
@@ -404,6 +444,19 @@ function viewJournal() {
       const queue = () => { jPending = { date: d, data: gather() }; $('#jSaved').textContent = 'Saving…'; clearTimeout(jTimer); jTimer = setTimeout(flushJournal, 700); };
       $$('.jr').forEach((el) => { el.addEventListener('input', queue); el.addEventListener('blur', flushJournal); });
       $('#jDate').addEventListener('change', (e) => { if (e.target.value) { flushJournal(); S.jDate = e.target.value; render(); } });
+      drawJShots(d);
+      const box = $('#jShots');
+      box.addEventListener('click', (e) => {
+        const rm = e.target.closest('[data-rm]');
+        if (rm) { removeJournalImage(rm.dataset.rm, d); return; }
+        if (e.target.closest('#jAdd')) { $('#jShotFile').click(); return; }
+        const th = e.target.closest('.thumb');
+        if (th && shotCache.get(th.dataset.id)) showImg(shotCache.get(th.dataset.id));
+      });
+      $('#jShotFile').addEventListener('change', (e) => { addJournalImages([...e.target.files], d); e.target.value = ''; });
+      const card = box.closest('.card');
+      card.addEventListener('dragover', (e) => e.preventDefault());
+      card.addEventListener('drop', (e) => { if (e.dataTransfer && e.dataTransfer.files.length) { e.preventDefault(); addJournalImages([...e.dataTransfer.files], d); } });
     },
   };
 }
@@ -937,6 +990,12 @@ document.addEventListener('change', (e) => {
   }
   if (el.id === 'csvFile' && el.files[0]) { const f = el.files[0], acc = $('#impAcc').value; el.value = ''; safe(() => importCsv(f, acc), 'Import failed'); }
   if (el.id === 'restoreFile' && el.files[0]) { const f = el.files[0]; el.value = ''; safe(() => restoreJson(f), 'Restore failed'); }
+});
+
+document.addEventListener('paste', (e) => {
+  if (S.tab !== 'journal' || !S.user || $('#ov')) return;
+  const fs = [...((e.clipboardData && e.clipboardData.files) || [])].filter((f) => f.type.startsWith('image/'));
+  if (fs.length) { e.preventDefault(); addJournalImages(fs, S.jDate); }
 });
 
 // Top bar filters
